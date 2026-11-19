@@ -38,7 +38,7 @@ UdpProtocol::UdpProtocol() :
    _connected(false),
    _next_send_seq(0),
    _next_recv_seq(0),
-   _udp(NULL)
+   _transport(NULL)
 {
    _last_sent_input.init(-1, NULL, 1);
    _last_received_input.init(-1, NULL, 1);
@@ -62,14 +62,14 @@ UdpProtocol::~UdpProtocol()
 }
 
 void
-UdpProtocol::Init(Udp *udp,
+UdpProtocol::Init(ITransport *transport,
                   Poll &poll,
                   int queue,
                   char *ip,
                   u_short port,
                   UdpMsg::connect_status *status)
 {  
-   _udp = udp;
+   _transport = transport;
    _queue = queue;
    _local_connect_status = status;
 
@@ -86,7 +86,7 @@ UdpProtocol::Init(Udp *udp,
 void
 UdpProtocol::SendInput(GameInput &input)
 {
-   if (_udp) {
+   if (_transport) {
       if (_current_state == Running) {
          /*
           * Check to see if this is a good time to adjust for the rift...
@@ -181,7 +181,7 @@ UdpProtocol::GetEvent(UdpProtocol::Event &e)
 bool
 UdpProtocol::OnLoopPoll(void *cookie)
 {
-   if (!_udp) {
+   if (!_transport) {
       return true;
    }
 
@@ -245,7 +245,7 @@ UdpProtocol::OnLoopPoll(void *cookie)
    case Disconnected:
       if (_shutdown_timeout < now) {
          Log("Shutting down udp connection.\n");
-         _udp = NULL;
+         _transport = NULL;
          _shutdown_timeout = 0;
       }
 
@@ -291,7 +291,7 @@ bool
 UdpProtocol::HandlesMsg(sockaddr_in &from,
                         UdpMsg *msg)
 {
-   if (!_udp) {
+   if (!_transport) {
       return false;
    }
    return _peer_addr.sin_addr.S_un.S_addr == from.sin_addr.S_un.S_addr &&
@@ -384,7 +384,7 @@ UdpProtocol::QueueEvent(const UdpProtocol::Event &evt)
 void
 UdpProtocol::Synchronize()
 {
-   if (_udp) {
+   if (_transport) {
       _current_state = Syncing;
       _state.sync.roundtrips_remaining = NUM_SYNC_PACKETS;
       SendSyncRequest();
@@ -734,7 +734,7 @@ UdpProtocol::PumpSendQueue()
       } else {
          ASSERT(entry.dest_addr.sin_addr.s_addr);
 
-         _udp->SendTo((char *)entry.msg, entry.msg->PacketSize(), 0,
+         _transport->SendTo((char *)entry.msg, entry.msg->PacketSize(), 0,
                       (struct sockaddr *)&entry.dest_addr, sizeof entry.dest_addr);
 
          delete entry.msg;
@@ -743,7 +743,7 @@ UdpProtocol::PumpSendQueue()
    }
    if (_oo_packet.msg && _oo_packet.send_time < Platform::GetCurrentTimeMS()) {
       Log("sending rogue oop!");
-      _udp->SendTo((char *)_oo_packet.msg, _oo_packet.msg->PacketSize(), 0,
+      _transport->SendTo((char *)_oo_packet.msg, _oo_packet.msg->PacketSize(), 0,
                      (struct sockaddr *)&_oo_packet.dest_addr, sizeof _oo_packet.dest_addr);
 
       delete _oo_packet.msg;

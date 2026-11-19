@@ -1,0 +1,14 @@
+D:\Projects\ggpo_eos\src\lib\ggpo\bitvector.cpp;D:\Projects\ggpo_eos\build\src\GGPO.dir\Release\bitvector.obj
+D:\Projects\ggpo_eos\src\lib\ggpo\game_input.cpp;D:\Projects\ggpo_eos\build\src\GGPO.dir\Release\game_input.obj
+D:\Projects\ggpo_eos\src\lib\ggpo\input_queue.cpp;D:\Projects\ggpo_eos\build\src\GGPO.dir\Release\input_queue.obj
+D:\Projects\ggpo_eos\src\lib\ggpo\log.cpp;D:\Projects\ggpo_eos\build\src\GGPO.dir\Release\log.obj
+D:\Projects\ggpo_eos\src\lib\ggpo\main.cpp;D:\Projects\ggpo_eos\build\src\GGPO.dir\Release\main.obj
+D:\Projects\ggpo_eos\src\lib\ggpo\poll.cpp;D:\Projects\ggpo_eos\build\src\GGPO.dir\Release\poll.obj
+D:\Projects\ggpo_eos\src\lib\ggpo\sync.cpp;D:\Projects\ggpo_eos\build\src\GGPO.dir\Release\sync.obj
+D:\Projects\ggpo_eos\src\lib\ggpo\timesync.cpp;D:\Projects\ggpo_eos\build\src\GGPO.dir\Release\timesync.obj
+D:\Projects\ggpo_eos\src\lib\ggpo\platform_windows.cpp;D:\Projects\ggpo_eos\build\src\GGPO.dir\Release\platform_windows.obj
+D:\Projects\ggpo_eos\src\lib\ggpo\network\udp.cpp;D:\Projects\ggpo_eos\build\src\GGPO.dir\Release\udp.obj
+D:\Projects\ggpo_eos\src\lib\ggpo\network\udp_proto.cpp;D:\Projects\ggpo_eos\build\src\GGPO.dir\Release\udp_proto.obj
+D:\Projects\ggpo_eos\src\lib\ggpo\backends\p2p.cpp;D:\Projects\ggpo_eos\build\src\GGPO.dir\Release\p2p.obj
+D:\Projects\ggpo_eos\src\lib\ggpo\backends\spectator.cpp;D:\Projects\ggpo_eos\build\src\GGPO.dir\Release\spectator.obj
+D:\Projects\ggpo_eos\src\lib\ggpo\backends\synctest.cpp;D:\Projects\ggpo_eos\build\src\GGPO.dir\Release\synctest.obj

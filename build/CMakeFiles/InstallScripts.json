@@ -1,0 +1,9 @@
+{
+	"InstallScripts" : 
+	[
+		"D:/Projects/ggpo_eos/build/cmake_install.cmake",
+		"D:/Projects/ggpo_eos/build/src/cmake_install.cmake",
+		"D:/Projects/ggpo_eos/build/src/apps/vectorwar/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

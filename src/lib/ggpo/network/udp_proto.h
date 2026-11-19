@@ -15,6 +15,7 @@
 #include "timesync.h"
 #include "ggponet.h"
 #include "ring_buffer.h"
+#include "itransport.h"
 
 class UdpProtocol : public IPollSink
 {
@@ -63,11 +64,11 @@ public:
    UdpProtocol();
    virtual ~UdpProtocol();
 
-   void Init(Udp *udp, Poll &p, int queue, char *ip, u_short port, UdpMsg::connect_status *status);
+   void Init(ITransport *_transport, Poll &p, int queue, char *ip, u_short port, UdpMsg::connect_status *status);
 
    void Synchronize();
    bool GetPeerConnectStatus(int id, int *frame);
-   bool IsInitialized() { return _udp != NULL; }
+   bool IsInitialized() { return _transport != NULL; }
    bool IsSynchronized() { return _current_state == Running; }
    bool IsRunning() { return _current_state == Running; }
    void SendInput(GameInput &input);
@@ -126,7 +127,7 @@ protected:
    /*
     * Network transmission information
     */
-   Udp            *_udp;
+   ITransport    *_transport;
    sockaddr_in    _peer_addr; 
    uint16         _magic_number;
    int            _queue;

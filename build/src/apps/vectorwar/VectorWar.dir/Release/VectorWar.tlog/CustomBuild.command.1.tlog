@@ -1,0 +1,10 @@
+^D:\PROJECTS\GGPO_EOS\SRC\APPS\VECTORWAR\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SD:/Projects/ggpo_eos -BD:/Projects/ggpo_eos/build --check-stamp-file D:/Projects/ggpo_eos/build/src/apps/vectorwar/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
