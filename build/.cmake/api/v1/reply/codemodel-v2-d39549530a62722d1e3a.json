@@ -29,7 +29,7 @@
 				{
 					"build" : "src",
 					"hasInstallRule" : true,
-					"jsonFile" : "directory-src-Debug-b0fa2bebd6e638805954.json",
+					"jsonFile" : "directory-src-Debug-5ae565e24bcf71f1bed1.json",
 					"minimumCMakeVersion" : 
 					{
 						"string" : "3.10"
@@ -90,7 +90,7 @@
 				{
 					"directoryIndex" : 1,
 					"id" : "GGPO::@145eef247bfb46b6828c",
-					"jsonFile" : "target-GGPO-Debug-0a965ddf5da0e7d21562.json",
+					"jsonFile" : "target-GGPO-Debug-cc9ee4f79f2e76e5cead.json",
 					"name" : "GGPO",
 					"projectIndex" : 0
 				},
@@ -138,7 +138,7 @@
 				{
 					"build" : "src",
 					"hasInstallRule" : true,
-					"jsonFile" : "directory-src-Release-3db84df19cefee9dea9c.json",
+					"jsonFile" : "directory-src-Release-8f9990c0f8f689c801a3.json",
 					"minimumCMakeVersion" : 
 					{
 						"string" : "3.10"
@@ -199,7 +199,7 @@
 				{
 					"directoryIndex" : 1,
 					"id" : "GGPO::@145eef247bfb46b6828c",
-					"jsonFile" : "target-GGPO-Release-21df55299cf29cf28bc5.json",
+					"jsonFile" : "target-GGPO-Release-85ba42abc95098139f64.json",
 					"name" : "GGPO",
 					"projectIndex" : 0
 				},

@@ -187,7 +187,8 @@ ggpo_set_disconnect_notify_start(GGPOSession *ggpo, int timeout)
    return ggpo->SetDisconnectNotifyStart(timeout);
 }
 
-GGPOErrorCode ggpo_start_spectating(GGPOSession **session,
+GGPOErrorCode 
+ggpo_start_spectating(GGPOSession **session,
                                     GGPOSessionCallbacks *cb,
                                     const char *game,
                                     int num_players,
@@ -204,5 +205,19 @@ GGPOErrorCode ggpo_start_spectating(GGPOSession **session,
                                                  host_ip,
                                                  host_port);
    return GGPO_OK;
+}
+
+GGPOErrorCode
+ggpo_set_eos_send_callback(GGPOSession* ggpo, EosSendCallback callback)
+{
+    if (!ggpo){ return GGPO_ERRORCODE_INVALID_SESSION; }
+
+    Peer2PeerBackend* backend = dynamic_cast<Peer2PeerBackend*>(ggpo);
+
+    if (!backend){ return GGPO_ERRORCODE_UNSUPPORTED; }
+
+    backend->SetEosSendCallback(callback);
+
+    return GGPO_OK;
 }
 

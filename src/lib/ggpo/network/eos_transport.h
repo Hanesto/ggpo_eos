@@ -10,6 +10,13 @@
 #include <unordered_map>
 #include <queue>
 #include <vector>
+#include <mutex>
+
+typedef bool (*EosSendCallback)(
+    const char* remote_product_user_id,
+    const char* packet,
+    int packet_size
+);
 
 class EosTransport : public ITransport, public IPollSink
 {
@@ -73,6 +80,8 @@ private:
     std::string _local_product_user_id;
 
     std::queue<ReceivedPacket> _receive_queue;
+
+    std::mutex _receive_mutex;
 
     ReceiveCallback _receive_callback;
 

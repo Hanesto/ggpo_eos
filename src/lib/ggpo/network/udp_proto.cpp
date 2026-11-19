@@ -38,7 +38,9 @@ UdpProtocol::UdpProtocol() :
    _connected(false),
    _next_send_seq(0),
    _next_recv_seq(0),
-   _transport(NULL)
+   _transport(NULL),
+   _current_state(Disconnected),
+   _local_connect_status(NULL)
 {
    _last_sent_input.init(-1, NULL, 1);
    _last_received_input.init(-1, NULL, 1);
@@ -82,8 +84,14 @@ UdpProtocol::Init(ITransport *transport, Poll &poll, int queue, char *ip, u_shor
 }
 
 void
-UdpProtocol::InitEOS(ITransport *transport, Poll &poll, int queue, const char* product_user_id, UdpMsg::connect_status *status)
+UdpProtocol::InitEOS(ITransport* transport, Poll& poll, int queue, const char* product_user_id, UdpMsg::connect_status* status)
 {
+   if (!transport)
+   {
+      Log("Invalid EOS transport.\n");
+      return;
+   }
+
    if (!product_user_id || !product_user_id[0])
    {
       Log("Invalid EOS Product User ID.\n");
@@ -100,8 +108,7 @@ UdpProtocol::InitEOS(ITransport *transport, Poll &poll, int queue, const char* p
 
    _peer_addr.type = TransportAddress::EOS;
 
-   strncpy_s(_peer_addr.eos_product_user_id, product_user_id, sizeof(product_user_id) - 1);
-   _peer_addr.eos_product_user_id[sizeof(_peer_addr.eos_product_user_id) - 1] = '\0';
+   strcpy_s(_peer_addr.eos_product_user_id, sizeof(_peer_addr.eos_product_user_id), product_user_id);
 
    Initialize(transport, poll, queue, status);
 }
@@ -327,12 +334,22 @@ UdpProtocol::SendMsg(UdpMsg *msg)
 
 
 bool
-UdpProtocol::HandlesMsg(const TransportAddress &from, UdpMsg *msg)
+UdpProtocol::HandlesMsg(const TransportAddress& from, UdpMsg* msg)
 {
-    if (!_transport || _peer_addr.type != TransportAddress::UDP) { return false; }
+   if (!_transport || from.type != _peer_addr.type){ return false; }
 
-    return _peer_addr.udp.sin_addr.s_addr == from.udp.sin_addr.s_addr &&
-           _peer_addr.udp.sin_port == from.udp.sin_port;
+   if (_peer_addr.type == TransportAddress::UDP)
+   {
+      return _peer_addr.udp.sin_addr.s_addr == from.udp.sin_addr.s_addr &&
+               _peer_addr.udp.sin_port == from.udp.sin_port;
+   }
+
+   if (_peer_addr.type == TransportAddress::EOS)
+   {
+      return strcmp(_peer_addr.eos_product_user_id, from.eos_product_user_id) == 0;
+   }
+
+   return false;
 }
 
 void
@@ -780,9 +797,6 @@ UdpProtocol::PumpSendQueue()
          _oo_packet.dest_addr = entry.dest_addr;
       } 
       else {
-         ASSERT(entry.dest_addr.type == TransportAddress::UDP);
-         ASSERT(entry.dest_addr.udp.sin_addr.s_addr != 0);
-
          _transport->SendTo((const char*)entry.msg, entry.msg->PacketSize(), entry.dest_addr);
          delete entry.msg;
       }

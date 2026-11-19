@@ -6,6 +6,7 @@
  */
 
 #include "p2p.h"
+#include "eos_bridge.h"
 
 static const int RECOMMENDATION_INTERVAL           = 240;
 static const int DEFAULT_DISCONNECT_TIMEOUT        = 5000;
@@ -42,6 +43,8 @@ Peer2PeerBackend::Peer2PeerBackend(GGPOSessionCallbacks *cb,
     * Initialize the UDP port
     */
    _udp.Init(localport, &_poll, this);
+   _eos_transport.Init(&_poll);
+   GGPO_SetEosTransport(&_eos_transport);
 
    _endpoints = new UdpProtocol[_num_players];
    memset(_local_connect_status, 0, sizeof(_local_connect_status));
@@ -58,20 +61,20 @@ Peer2PeerBackend::Peer2PeerBackend(GGPOSessionCallbacks *cb,
 Peer2PeerBackend::~Peer2PeerBackend()
 {
    delete [] _endpoints;
+   GGPO_SetEosTransport(nullptr);
 }
 
 void
-Peer2PeerBackend::AddRemotePlayer(char *ip, uint16 port, int queue)
+Peer2PeerBackend::AddRemotePlayer(char* remoteip, uint16 reportport, int queue)
 {
-   /*
-    * Start the state machine (xxx: no)
-    */
-   _synchronizing = true;
-   
-   _endpoints[queue].Init(&_udp, _poll, queue, ip, port, _local_connect_status);
-   _endpoints[queue].SetDisconnectTimeout(_disconnect_timeout);
-   _endpoints[queue].SetDisconnectNotifyStart(_disconnect_notify_start);
-   _endpoints[queue].Synchronize();
+    _synchronizing = true;
+
+    _endpoints[queue].Init(&_udp, _poll, queue, remoteip, reportport, _local_connect_status);
+
+    _endpoints[queue].SetDisconnectTimeout(_disconnect_timeout);
+    _endpoints[queue].SetDisconnectNotifyStart(_disconnect_notify_start);
+
+    _endpoints[queue].Synchronize();
 }
 
 void
@@ -79,7 +82,7 @@ Peer2PeerBackend::AddRemotePlayerEOS(const char* remote_product_user_id, int que
 {
     _synchronizing = true;
 
-    _endpoints[queue].InitEOS(&_udp, _poll, queue, remote_product_user_id, _local_connect_status);
+    _endpoints[queue].InitEOS(&_eos_transport, _poll, queue, remote_product_user_id, _local_connect_status);
 
     _endpoints[queue].SetDisconnectTimeout(_disconnect_timeout);
     _endpoints[queue].SetDisconnectNotifyStart(_disconnect_notify_start);
@@ -592,30 +595,27 @@ Peer2PeerBackend::PlayerHandleToQueue(GGPOPlayerHandle player, int *queue)
    return GGPO_OK;
 }
 
- 
-
 void
-Peer2PeerBackend::OnMsg(const TransportAddress& from, UdpMsg *msg, int len)
+Peer2PeerBackend::OnMsg(const TransportAddress& from, UdpMsg* msg, int len)
 {
-   if (from.type == TransportAddress::UDP) {
-      for (int i = 0; i < _num_players; i++) {
-         if (_endpoints[i].HandlesMsg(from, msg)) {
-            _endpoints[i].OnMsg(msg, len);
-            return;
-         }
-      }
-
-      for (int i = 0; i < _num_spectators; i++) {
-         if (_spectators[i].HandlesMsg(from, msg)) {
-            _spectators[i].OnMsg(msg, len);
-            return;
-         }
+   for (int i = 0; i < _num_players; i++)
+   {
+      if (_endpoints[i].HandlesMsg(from, msg))
+      {
+         _endpoints[i].OnMsg(msg, len);
+         return;
       }
    }
 
-   // EOS packet routing will be added here.
+   for (int i = 0; i < _num_spectators; i++)
+   {
+      if (_spectators[i].HandlesMsg(from, msg))
+      {
+         _spectators[i].OnMsg(msg, len);
+         return;
+      }
+   }
 }
-
 
 void
 Peer2PeerBackend::CheckInitialSync()
@@ -642,4 +642,19 @@ Peer2PeerBackend::CheckInitialSync()
       _callbacks.on_event(&info);
       _synchronizing = false;
    }
+}
+
+void Peer2PeerBackend::SetEosSendCallback(EosSendCallback callback)
+{
+   _eos_transport.SetSendCallback(
+      [callback](
+         const char* remote_id,
+         const char* packet,
+         int len
+      ) -> bool
+      {
+         return callback &&
+               callback(remote_id, packet, len);
+      }
+   );
 }

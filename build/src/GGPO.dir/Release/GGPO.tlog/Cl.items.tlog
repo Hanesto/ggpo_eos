@@ -13,3 +13,4 @@ D:\Projects\ggpo_eos\src\lib\ggpo\backends\p2p.cpp;D:\Projects\ggpo_eos\build\sr
 D:\Projects\ggpo_eos\src\lib\ggpo\backends\spectator.cpp;D:\Projects\ggpo_eos\build\src\GGPO.dir\Release\spectator.obj
 D:\Projects\ggpo_eos\src\lib\ggpo\backends\synctest.cpp;D:\Projects\ggpo_eos\build\src\GGPO.dir\Release\synctest.obj
 D:\Projects\ggpo_eos\src\lib\ggpo\network\eos_transport.cpp;D:\Projects\ggpo_eos\build\src\GGPO.dir\Release\eos_transport.obj
+D:\Projects\ggpo_eos\src\lib\ggpo\backends\eos_bridge.cpp;D:\Projects\ggpo_eos\build\src\GGPO.dir\Release\eos_bridge.obj

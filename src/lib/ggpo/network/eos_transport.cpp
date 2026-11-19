@@ -2,9 +2,12 @@
 
 #include <string.h>
 #include <utility>
+#include <mutex>
 
 EosTransport::EosTransport()
-    : _initialized(false)
+    : _initialized(false),
+    _send_callback(nullptr),
+    _receive_callback(nullptr)
 {
 }
 
@@ -16,10 +19,11 @@ EosTransport::~EosTransport()
 void
 EosTransport::Init(Poll* poll)
 {
-    if (!poll){ return; }
+    if (!poll || _initialized){ return; }
+
+    _initialized = true;
 
     poll->RegisterLoop(this);
-    _initialized = true;
 }
 
 void
@@ -49,14 +53,13 @@ EosTransport::SetReceiveCallback(ReceiveCallback callback)
 bool
 EosTransport::SendTo(const char* buffer, int len, const TransportAddress& destination)
 {
-    if (!_initialized){ return false; }
-    if (!buffer || len <= 0){ return false; }
+    if (!_initialized || !buffer || len <= 0){ return false; }
     if (destination.type != TransportAddress::EOS){ return false; }
-    if (!_send_callback){ return false; }
 
     const char* remote_id = destination.eos_product_user_id;
 
     if (remote_id[0] == '\0'){ return false; }
+    if (!_send_callback){ return false; }
 
     return _send_callback(remote_id, buffer, len);
 }
@@ -64,37 +67,53 @@ EosTransport::SendTo(const char* buffer, int len, const TransportAddress& destin
 void
 EosTransport::ReceivePacket(const char* remote_product_user_id, const uint8_t* data, int len)
 {
-    if (!_initialized || !remote_product_user_id || !data || len <= 0 ||
-        strlen(remote_product_user_id) >= sizeof(TransportAddress::eos_product_user_id))
-    {
-        return;
-    }
+    if (!remote_product_user_id || !data || len <= 0){ return; }
+    if (strlen(remote_product_user_id) >= sizeof(TransportAddress::eos_product_user_id)){ return;}
 
     ReceivedPacket packet;
 
     packet.from.type = TransportAddress::EOS;
 
-    strncpy_s(packet.from.eos_product_user_id, remote_product_user_id, sizeof(packet.from.eos_product_user_id) - 1);
-    packet.from.eos_product_user_id[sizeof(packet.from.eos_product_user_id) - 1] = '\0';
+    strcpy_s(
+        packet.from.eos_product_user_id,
+        sizeof(packet.from.eos_product_user_id),
+        remote_product_user_id
+    );
 
     packet.data.assign(data, data + len);
 
-    _receive_queue.push(packet);
+    {
+        std::lock_guard<std::mutex> lock(_receive_mutex);
+
+        if (!_initialized){ return; }
+
+        _receive_queue.push(std::move(packet));
+    }
 }
 
 bool
 EosTransport::OnLoopPoll(void* cookie)
 {
-    while (!_receive_queue.empty())
+    // Move incoming packets into a local queue.
+    std::queue<ReceivedPacket> pending_packets;
+
     {
-        ReceivedPacket packet = std::move(_receive_queue.front());
-        _receive_queue.pop();
+        std::lock_guard<std::mutex> lock(_receive_mutex);
+        std::swap(pending_packets, _receive_queue);
+    }
+
+    // Process packets without holding the receive mutex.
+    while (!pending_packets.empty())
+    {
+        ReceivedPacket packet = std::move(pending_packets.front());
+        pending_packets.pop();
 
         if (!_receive_callback){ continue; }
         if (packet.data.empty()){ continue; }
 
         _receive_callback(packet.from, reinterpret_cast<const char*>(packet.data.data()), static_cast<int>(packet.data.size()));
     }
+
     return true;
 }
 
@@ -103,8 +122,15 @@ EosTransport::Close()
 {
     _initialized = false;
 
-    while (!_receive_queue.empty()){ _receive_queue.pop(); }
+    {
+        std::lock_guard<std::mutex> lock(_receive_mutex);
+
+        std::queue<ReceivedPacket> empty_queue;
+        std::swap(_receive_queue, empty_queue);
+    }
 
     _send_callback = nullptr;
     _receive_callback = nullptr;
+
+    _local_product_user_id.clear();
 }

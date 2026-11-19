@@ -4,6 +4,8 @@ add_library(GGPO
 	${GGPO_LIB_SRC}
 	lib/ggpo/network/eos_transport.h
 	lib/ggpo/network/eos_transport.cpp
+	lib/ggpo/network/eos_bridge.cpp
+	lib/ggpo/network/eos_bridge.h
 )
 
 add_common_flags(GGPO)

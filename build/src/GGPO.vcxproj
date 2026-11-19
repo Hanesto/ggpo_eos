@@ -251,6 +251,8 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="D:\Projects\ggpo_eos\src\include\ggponet.h" />
     <ClInclude Include="D:\Projects\ggpo_eos\src\lib\ggpo\network\eos_transport.h" />
     <ClCompile Include="D:\Projects\ggpo_eos\src\lib\ggpo\network\eos_transport.cpp" />
+    <ClCompile Include="D:\Projects\ggpo_eos\src\lib\ggpo\backends\eos_bridge.cpp" />
+    <ClInclude Include="D:\Projects\ggpo_eos\src\lib\ggpo\backends\eos_bridge.h" />
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
