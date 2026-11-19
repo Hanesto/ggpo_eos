@@ -86,6 +86,8 @@ public:
    void SetDisconnectTimeout(int timeout);
    void SetDisconnectNotifyStart(int timeout);
 
+   void InitEOS(ITransport *transport, Poll &p, int queue, const char* product_user_id, UdpMsg::connect_status *status);
+
 protected:
    enum State {
       Syncing,
@@ -104,6 +106,8 @@ protected:
       QueueEntry(unsigned int time, const TransportAddress& addr, UdpMsg* message)
          : queue_time(time), dest_addr(addr), msg(message){ }
    };
+   
+   void Initialize(ITransport *transport, Poll &poll, int queue, UdpMsg::connect_status *status);
 
    bool CreateSocket(int retries);
    void UpdateNetworkStats(void);

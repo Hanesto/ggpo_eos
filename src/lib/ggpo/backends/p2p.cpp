@@ -61,9 +61,7 @@ Peer2PeerBackend::~Peer2PeerBackend()
 }
 
 void
-Peer2PeerBackend::AddRemotePlayer(char *ip,
-                                  uint16 port,
-                                  int queue)
+Peer2PeerBackend::AddRemotePlayer(char *ip, uint16 port, int queue)
 {
    /*
     * Start the state machine (xxx: no)
@@ -74,6 +72,19 @@ Peer2PeerBackend::AddRemotePlayer(char *ip,
    _endpoints[queue].SetDisconnectTimeout(_disconnect_timeout);
    _endpoints[queue].SetDisconnectNotifyStart(_disconnect_notify_start);
    _endpoints[queue].Synchronize();
+}
+
+void
+Peer2PeerBackend::AddRemotePlayerEOS(const char* remote_product_user_id, int queue)
+{
+    _synchronizing = true;
+
+    _endpoints[queue].InitEOS(&_udp, _poll, queue, remote_product_user_id, _local_connect_status);
+
+    _endpoints[queue].SetDisconnectTimeout(_disconnect_timeout);
+    _endpoints[queue].SetDisconnectNotifyStart(_disconnect_notify_start);
+
+    _endpoints[queue].Synchronize();
 }
 
 GGPOErrorCode Peer2PeerBackend::AddSpectator(char *ip,

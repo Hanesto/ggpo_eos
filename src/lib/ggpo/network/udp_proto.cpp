@@ -61,13 +61,10 @@ UdpProtocol::~UdpProtocol()
    ClearSendQueue();
 }
 
-
 void
 UdpProtocol::Init(ITransport *transport, Poll &poll, int queue, char *ip, u_short port, UdpMsg::connect_status *status)
 {
-    _transport = transport;
-    _queue = queue;
-    _local_connect_status = status;
+    _transport = NULL;
 
     memset(&_peer_addr, 0, sizeof(_peer_addr));
 
@@ -75,19 +72,54 @@ UdpProtocol::Init(ITransport *transport, Poll &poll, int queue, char *ip, u_shor
     _peer_addr.udp.sin_family = AF_INET;
     _peer_addr.udp.sin_port = htons(port);
 
-    if (inet_pton(AF_INET, ip, &_peer_addr.udp.sin_addr) != 1) 
+    if (inet_pton(AF_INET, ip, &_peer_addr.udp.sin_addr) != 1)
     {
         Log("Invalid peer IP address: %s\n", ip);
-        _transport = NULL;
         return;
     }
 
-    do { _magic_number = (uint16)rand(); } 
+    Initialize(transport, poll, queue, status);
+}
+
+void
+UdpProtocol::InitEOS(ITransport *transport, Poll &poll, int queue, const char* product_user_id, UdpMsg::connect_status *status)
+{
+   if (!product_user_id || !product_user_id[0])
+   {
+      Log("Invalid EOS Product User ID.\n");
+      return;
+   }
+
+   if (strlen(product_user_id) >= sizeof(_peer_addr.eos_product_user_id))
+   {
+      Log("EOS Product User ID is too long.\n");
+      return;
+   }
+
+   memset(&_peer_addr, 0, sizeof(_peer_addr));
+
+   _peer_addr.type = TransportAddress::EOS;
+
+   strncpy_s(_peer_addr.eos_product_user_id, product_user_id, sizeof(product_user_id) - 1);
+   _peer_addr.eos_product_user_id[sizeof(_peer_addr.eos_product_user_id) - 1] = '\0';
+
+   Initialize(transport, poll, queue, status);
+}
+
+void
+UdpProtocol::Initialize(ITransport *transport, Poll &poll, int queue, UdpMsg::connect_status *status)
+{
+    _transport = transport;
+    _queue = queue;
+    _local_connect_status = status;
+
+    do {
+        _magic_number = (uint16)rand();
+    }
     while (_magic_number == 0);
 
     poll.RegisterLoop(this);
 }
-
 
 void
 UdpProtocol::SendInput(GameInput &input)
@@ -306,7 +338,15 @@ UdpProtocol::HandlesMsg(const TransportAddress &from, UdpMsg *msg)
 void
 UdpProtocol::OnMsg(UdpMsg *msg, int len)
 {
-   if (!msg || len < sizeof(msg->hdr)){return;}
+   if (!msg || len < sizeof(msg->hdr)){ return; }
+   if (len > MAX_UDP_PACKET_SIZE){ return; }
+   if (msg->hdr.type > UdpMsg::InputAck){ return; }
+
+   if (len != msg->PacketSize())
+   {
+      Log("recv rejecting packet with invalid size: %d\n", len);
+      return;
+   }
 
    bool handled = false;
    typedef bool (UdpProtocol::*DispatchFn)(UdpMsg *msg, int len);

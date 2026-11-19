@@ -17,19 +17,19 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 27,
+				"line" : 29,
 				"parent" : 0
 			},
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 35,
+				"line" : 37,
 				"parent" : 0
 			},
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 45,
+				"line" : 47,
 				"parent" : 0
 			}
 		]
@@ -57,7 +57,7 @@
 			"destination" : "lib",
 			"paths" : 
 			[
-				"lib/x64/Release/GGPO.lib"
+				"lib/x64/Debug/GGPO.lib"
 			],
 			"targetId" : "GGPO::@145eef247bfb46b6828c",
 			"targetIndex" : 1,
@@ -70,7 +70,7 @@
 			"destination" : "bin",
 			"paths" : 
 			[
-				"bin/x64/Release/GGPO.dll"
+				"bin/x64/Debug/GGPO.dll"
 			],
 			"targetId" : "GGPO::@145eef247bfb46b6828c",
 			"targetIndex" : 1,
@@ -83,7 +83,7 @@
 			"isOptional" : true,
 			"paths" : 
 			[
-				"build/bin/x64/Release/GGPO.pdb"
+				"build/bin/x64/Debug/GGPO.pdb"
 			],
 			"type" : "file"
 		}

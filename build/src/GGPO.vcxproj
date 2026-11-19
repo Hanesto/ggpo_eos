@@ -249,6 +249,8 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="D:\Projects\ggpo_eos\src\lib\ggpo\backends\spectator.cpp" />
     <ClCompile Include="D:\Projects\ggpo_eos\src\lib\ggpo\backends\synctest.cpp" />
     <ClInclude Include="D:\Projects\ggpo_eos\src\include\ggponet.h" />
+    <ClInclude Include="D:\Projects\ggpo_eos\src\lib\ggpo\network\eos_transport.h" />
+    <ClCompile Include="D:\Projects\ggpo_eos\src\lib\ggpo\network\eos_transport.cpp" />
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>

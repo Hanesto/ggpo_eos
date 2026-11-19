@@ -2,6 +2,8 @@ include(CMakeSources.cmake)
 
 add_library(GGPO
 	${GGPO_LIB_SRC}
+	lib/ggpo/network/eos_transport.h
+	lib/ggpo/network/eos_transport.cpp
 )
 
 add_common_flags(GGPO)

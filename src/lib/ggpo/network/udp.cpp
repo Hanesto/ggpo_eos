@@ -8,6 +8,13 @@
 #include "types.h"
 #include "udp.h"
 
+#include <utility>
+#include <string.h>
+
+static Udp::EosSendCallback g_eos_send_callback = NULL;
+std::queue<Udp::EosPacket> Udp::_eos_receive_queue;
+std::mutex Udp::_eos_queue_mutex;
+
 SOCKET
 CreateSocket(uint16 bind_port, int retries)
 {
@@ -71,59 +78,127 @@ Udp::Init(uint16 port, Poll *poll, Callbacks *callbacks)
 bool
 Udp::SendTo(const char* buffer, int len, const TransportAddress& destination)
 {
-    if (_socket == INVALID_SOCKET) { return false; }
-    if (buffer == NULL || len <= 0) { return false; }
-    if (destination.type != TransportAddress::UDP) { return false; }
-    if (destination.udp.sin_family != AF_INET || destination.udp.sin_addr.s_addr == 0 || destination.udp.sin_port == 0) { return false; }
+   if (buffer == NULL || len <= 0){ return false; }
 
-    int res = sendto(_socket, buffer, len, 0, (const sockaddr*)&destination.udp, sizeof(destination.udp));
+   // Existing UDP transport.
+   if (destination.type == TransportAddress::UDP)
+   {
+      if (_socket == INVALID_SOCKET){ return false; }
 
-    if (res == SOCKET_ERROR) 
-    {
-        DWORD err = WSAGetLastError();
-        Log("sendto failed (error: %lu).\n", err);
-        return false;
-    }
+      if (destination.udp.sin_family != AF_INET ||
+         destination.udp.sin_addr.s_addr == 0 ||
+         destination.udp.sin_port == 0)
+      {
+         return false;
+      }
 
-    return res == len;
+      int res = sendto(_socket, buffer, len, 0, (const sockaddr*)&destination.udp, sizeof(destination.udp));
+
+      if (res == SOCKET_ERROR)
+      {
+         DWORD err = WSAGetLastError();
+         Log("sendto failed (error: %lu).\n", err);
+         return false;
+      }
+
+      return res == len;
+   }
+
+   if (destination.type == TransportAddress::EOS)
+   {
+      if (g_eos_send_callback == NULL)
+      {
+         Log("EOS send callback is not registered.\n");
+         return false;
+      }
+
+      return g_eos_send_callback(destination.eos_product_user_id, buffer, len);
+   }
+
+   return false;
 }
-
 
 bool
 Udp::OnLoopPoll(void *cookie)
 {
-   uint8          recv_buf[MAX_UDP_PACKET_SIZE];
-   sockaddr_in    recv_addr;
-   int            recv_addr_len;
+   // Process existing UDP packets.
+   if (_socket != INVALID_SOCKET)
+   {
+      uint8 recv_buf[MAX_UDP_PACKET_SIZE];
+      sockaddr_in recv_addr;
+      int recv_addr_len;
 
-   for (;;) {
-      recv_addr_len = sizeof(recv_addr);
-      int len = recvfrom(_socket, (char *)recv_buf, MAX_UDP_PACKET_SIZE, 0, (struct sockaddr *)&recv_addr, &recv_addr_len);
-
-      // TODO: handle len == 0... indicates a disconnect.
-
-      if (len == -1) 
+      for (;;)
       {
-         int error = WSAGetLastError();
-         if (error != WSAEWOULDBLOCK) {
-            Log("recvfrom WSAGetLastError returned %d (%x).\n", error, error);
+         recv_addr_len = sizeof(recv_addr);
+
+         int len = recvfrom(_socket, (char *)recv_buf, MAX_UDP_PACKET_SIZE, 0, (struct sockaddr *)&recv_addr, &recv_addr_len);
+
+         if (len == SOCKET_ERROR)
+         {
+            int error = WSAGetLastError();
+            if (error != WSAEWOULDBLOCK){ Log("recvfrom error: %d\n", error); }
+            break;
          }
-         break;
-      } else if (len > 0) 
-      {
-         char src_ip[1024];
-         Log("recvfrom returned (len:%d  from:%s:%d).\n", len, inet_ntop(AF_INET, (void*)&recv_addr.sin_addr, src_ip, ARRAY_SIZE(src_ip)), ntohs(recv_addr.sin_port) );
-         UdpMsg *msg = (UdpMsg *)recv_buf;
 
-         TransportAddress from;
-         from.type = TransportAddress::UDP;
-         from.udp = recv_addr;
+         if (len > 0 && _callbacks)
+         {
+            TransportAddress from;
+            from.type = TransportAddress::UDP;
+            from.udp = recv_addr;
 
-         _callbacks->OnMsg(from, msg, len);
-      } 
+            UdpMsg *msg = (UdpMsg *)recv_buf;
+
+            _callbacks->OnMsg(from, msg, len);
+         }
+      }
    }
+
+   // Process incoming EOS packets.
+   std::queue<EosPacket> pending_packets;
+
+   {
+      std::lock_guard<std::mutex> lock(_eos_queue_mutex);
+      std::swap(pending_packets, _eos_receive_queue);
+   }
+
+   while (!pending_packets.empty())
+   {
+      EosPacket packet = std::move(pending_packets.front());
+      pending_packets.pop();
+
+      if (!_callbacks || packet.data.size() < sizeof(UdpMsg::hdr))
+      {
+         continue;
+      }
+
+      if (packet.remote_product_user_id.empty() ||
+          packet.remote_product_user_id.size() >= sizeof(TransportAddress::eos_product_user_id))
+      {
+         continue;
+      }
+
+      TransportAddress from;
+      from.type = TransportAddress::EOS;
+
+      memcpy(
+         from.eos_product_user_id,
+         packet.remote_product_user_id.c_str(),
+         packet.remote_product_user_id.size() + 1
+      );
+
+      UdpMsg *msg = (UdpMsg *)packet.data.data();
+
+      _callbacks->OnMsg(
+         from,
+         msg,
+         (int)packet.data.size()
+      );
+   }
+
    return true;
 }
+
 
 void
 Udp::Close()
@@ -132,6 +207,27 @@ Udp::Close()
       closesocket(_socket);
       _socket = INVALID_SOCKET;
    }
+}
+
+void
+Udp::SetEosSendCallback(EosSendCallback callback)
+{
+   g_eos_send_callback = callback;
+}
+
+void
+Udp::ReceiveEosPacket(const char* remote_product_user_id, const char* packet, int packet_size)
+{
+   if (!remote_product_user_id || !packet || packet_size <= 0){ return; }
+
+   EosPacket incoming;
+
+   incoming.remote_product_user_id = remote_product_user_id;
+   incoming.data.assign(packet, packet + packet_size);
+
+   std::lock_guard<std::mutex> lock(_eos_queue_mutex);
+
+   _eos_receive_queue.push(std::move(incoming));
 }
 
 void

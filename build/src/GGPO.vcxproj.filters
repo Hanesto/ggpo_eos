@@ -43,6 +43,9 @@
     <ClCompile Include="D:\Projects\ggpo_eos\src\lib\ggpo\backends\synctest.cpp">
       <Filter>Backends</Filter>
     </ClCompile>
+    <ClCompile Include="D:\Projects\ggpo_eos\src\lib\ggpo\network\eos_transport.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="D:\Projects\ggpo_eos\src\lib\ggpo\bitvector.h">
@@ -102,6 +105,9 @@
     <ClInclude Include="D:\Projects\ggpo_eos\src\include\ggponet.h">
       <Filter>Public</Filter>
     </ClInclude>
+    <ClInclude Include="D:\Projects\ggpo_eos\src\lib\ggpo\network\eos_transport.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="D:\Projects\ggpo_eos\src\CMakeLists.txt" />
@@ -113,11 +119,17 @@
     <Filter Include="Backends">
       <UniqueIdentifier>{B998E5F2-AEF7-3353-AF67-03CCEF7C26CA}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{C96990C8-07B8-3BF0-B46B-CED8A2E7ABC7}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Network">
       <UniqueIdentifier>{0E3F4636-BA7B-3516-A25B-47F0A760038A}</UniqueIdentifier>
     </Filter>
     <Filter Include="Public">
       <UniqueIdentifier>{C3960982-BBE9-3F64-B07F-3E37D3CDD57C}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4E8A6C60-ACB6-3990-9E0B-0F03A4F5C990}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
