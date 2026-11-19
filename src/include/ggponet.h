@@ -44,6 +44,7 @@ typedef enum {
    GGPO_PLAYERTYPE_LOCAL,
    GGPO_PLAYERTYPE_REMOTE,
    GGPO_PLAYERTYPE_SPECTATOR,
+   GGPO_PLAYERTYPE_REMOTE_EOS
 } GGPOPlayerType;
 
 /*
@@ -74,14 +75,22 @@ typedef struct GGPOPlayer {
    int               size;
    GGPOPlayerType    type;
    int               player_num;
+
    union {
       struct {
       } local;
+
       struct {
          char           ip_address[32];
          unsigned short port;
       } remote;
+
+      struct {
+         char           product_user_id[64];
+      } remote_eos;
+
    } u;
+
 } GGPOPlayer;
 
 typedef struct GGPOLocalEndpoint {
@@ -479,6 +488,13 @@ GGPO_API GGPOErrorCode __cdecl ggpo_synchronize_input(GGPOSession *,
                                                       void *values,
                                                       int size,
                                                       int *disconnect_flags);
+
+GGPO_API GGPOErrorCode __cdecl ggpo_add_player_eos(
+    GGPOSession* session,
+    int player_num,
+    const char* remote_product_user_id,
+    GGPOPlayerHandle* handle
+);
 
 /*
  * ggpo_disconnect_player --

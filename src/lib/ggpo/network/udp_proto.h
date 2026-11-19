@@ -64,7 +64,7 @@ public:
    UdpProtocol();
    virtual ~UdpProtocol();
 
-   void Init(ITransport *_transport, Poll &p, int queue, char *ip, u_short port, UdpMsg::connect_status *status);
+   void Init(ITransport *_transport, Poll &p, int queue, const char *ip, u_short port, UdpMsg::connect_status *status);
 
    void Synchronize();
    bool GetPeerConnectStatus(int id, int *frame);

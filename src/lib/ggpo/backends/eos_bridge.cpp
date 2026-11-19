@@ -35,3 +35,12 @@ void GGPO_UnregisterEosSendCallback()
 {
     g_eos_send_callback = nullptr;
 }
+
+extern "C" __declspec(dllexport)
+void GGPO_ReceiveEosPacket(EosTransport* transport, const char* remote_product_user_id, const uint8_t* packet, int packet_size)
+{
+    if (!transport || !remote_product_user_id || !packet){ return; }
+    if (packet_size <= 0){ return; }
+
+    transport->ReceivePacket(remote_product_user_id, packet, packet_size);
+}

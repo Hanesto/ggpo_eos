@@ -2,6 +2,8 @@
 
 #include "../network/eos_transport.h"
 
+#include <stdint.h>
+
 #ifdef _WIN32
 #define GGPO_EOS_EXPORT extern "C" __declspec(dllexport)
 #else
@@ -21,3 +23,10 @@ GGPO_EOS_EXPORT void GGPO_RegisterEosSendCallback(
 );
 
 GGPO_EOS_EXPORT void GGPO_UnregisterEosSendCallback();
+
+GGPO_EOS_EXPORT void GGPO_ReceiveEosPacket(
+    EosTransport* transport,
+    const char* remote_product_user_id,
+    const uint8_t* packet,
+    int packet_size
+);

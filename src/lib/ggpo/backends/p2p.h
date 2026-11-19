@@ -48,8 +48,9 @@ protected:
    void CheckInitialSync(void);
    int Poll2Players(int current_frame);
    int PollNPlayers(int current_frame);
-   void AddRemotePlayer(char *remoteip, uint16 reportport, int queue);
+   void AddRemotePlayer(char* remoteip, uint16 reportport, int queue);
    void AddRemotePlayerEOS(const char* remote_product_user_id, int queue);
+   void ConfigureRemotePlayer(int queue);
    GGPOErrorCode AddSpectator(char *remoteip, uint16 reportport);
    virtual void OnSyncEvent(Sync::Event &e) { }
    virtual void OnUdpProtocolEvent(UdpProtocol::Event &e, GGPOPlayerHandle handle);

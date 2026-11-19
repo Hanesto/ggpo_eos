@@ -11,10 +11,6 @@
 #include <utility>
 #include <string.h>
 
-static Udp::EosSendCallback g_eos_send_callback = NULL;
-std::queue<Udp::EosPacket> Udp::_eos_receive_queue;
-std::mutex Udp::_eos_queue_mutex;
-
 SOCKET
 CreateSocket(uint16 bind_port, int retries)
 {
@@ -100,21 +96,8 @@ Udp::SendTo(const char* buffer, int len, const TransportAddress& destination)
          Log("sendto failed (error: %lu).\n", err);
          return false;
       }
-
       return res == len;
    }
-
-   if (destination.type == TransportAddress::EOS)
-   {
-      if (g_eos_send_callback == NULL)
-      {
-         Log("EOS send callback is not registered.\n");
-         return false;
-      }
-
-      return g_eos_send_callback(destination.eos_product_user_id, buffer, len);
-   }
-
    return false;
 }
 
@@ -153,36 +136,6 @@ Udp::OnLoopPoll(void *cookie)
          }
       }
    }
-
-   // Process incoming EOS packets.
-   std::queue<EosPacket> pending_packets;
-
-   // Swap the shared queue while holding the mutex.
-   {
-      std::lock_guard<std::mutex> lock(_eos_queue_mutex);
-      pending_packets.swap(_eos_receive_queue);
-   }
-
-   // Process packets without holding the mutex.
-   while (!pending_packets.empty())
-   {
-      EosPacket packet = std::move(pending_packets.front());
-      pending_packets.pop();
-
-      TransportAddress from;
-      from.type = TransportAddress::EOS;
-
-      strncpy_s(from.eos_product_user_id, packet.remote_product_user_id.c_str(), sizeof(from.eos_product_user_id) - 1);
-
-      from.eos_product_user_id[sizeof(from.eos_product_user_id) - 1] = '\0';
-
-      if (_callbacks)
-      {
-            UdpMsg* msg = (UdpMsg*)packet.data.data();
-            _callbacks->OnMsg(from, msg, (int)packet.data.size());
-      }
-   }
-
    return true;
 }
 
@@ -193,21 +146,6 @@ Udp::Close()
       closesocket(_socket);
       _socket = INVALID_SOCKET;
    }
-}
-
-void Udp::ReceiveEosPacket(const char* remote_product_user_id, const char* packet, int packet_size)
-{
-    if (!remote_product_user_id || !packet || packet_size <= 0 || packet_size > MAX_UDP_PACKET_SIZE){ return; }
-
-    EosPacket received;
-
-    received.remote_product_user_id = remote_product_user_id;
-    received.data.assign(packet, packet + packet_size);
-
-    {
-        std::lock_guard<std::mutex> lock(_eos_queue_mutex);
-        _eos_receive_queue.push(std::move(received));
-    }
 }
 
 void

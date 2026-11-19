@@ -71,27 +71,26 @@ Peer2PeerBackend::~Peer2PeerBackend()
 void
 Peer2PeerBackend::AddRemotePlayer(char* remoteip, uint16 reportport, int queue)
 {
-    _synchronizing = true;
-
-    _endpoints[queue].Init(&_udp, _poll, queue, remoteip, reportport, _local_connect_status);
-
-    _endpoints[queue].SetDisconnectTimeout(_disconnect_timeout);
-    _endpoints[queue].SetDisconnectNotifyStart(_disconnect_notify_start);
-
-    _endpoints[queue].Synchronize();
+   _endpoints[queue].Init(&_udp, _poll, queue, remoteip, reportport, _local_connect_status);
+   ConfigureRemotePlayer(queue);
 }
 
 void
 Peer2PeerBackend::AddRemotePlayerEOS(const char* remote_product_user_id, int queue)
 {
-    _synchronizing = true;
+   _endpoints[queue].InitEOS(&_eos_transport, _poll, queue, remote_product_user_id, _local_connect_status);
+   ConfigureRemotePlayer(queue);
+}
 
-    _endpoints[queue].InitEOS(&_eos_transport, _poll, queue, remote_product_user_id, _local_connect_status);
+void
+Peer2PeerBackend::ConfigureRemotePlayer(int queue)
+{
+   _synchronizing = true;
 
-    _endpoints[queue].SetDisconnectTimeout(_disconnect_timeout);
-    _endpoints[queue].SetDisconnectNotifyStart(_disconnect_notify_start);
+   _endpoints[queue].SetDisconnectTimeout(_disconnect_timeout);
+   _endpoints[queue].SetDisconnectNotifyStart(_disconnect_notify_start);
 
-    _endpoints[queue].Synchronize();
+   _endpoints[queue].Synchronize();
 }
 
 GGPOErrorCode Peer2PeerBackend::AddSpectator(char *ip,
@@ -259,8 +258,7 @@ int Peer2PeerBackend::PollNPlayers(int current_frame)
 
 
 GGPOErrorCode
-Peer2PeerBackend::AddPlayer(GGPOPlayer *player,
-                            GGPOPlayerHandle *handle)
+Peer2PeerBackend::AddPlayer(GGPOPlayer *player, GGPOPlayerHandle *handle)
 {
    if (player->type == GGPO_PLAYERTYPE_SPECTATOR) {
       return AddSpectator(player->u.remote.ip_address, player->u.remote.port);
@@ -272,8 +270,16 @@ Peer2PeerBackend::AddPlayer(GGPOPlayer *player,
    }
    *handle = QueueToPlayerHandle(queue);
 
-   if (player->type == GGPO_PLAYERTYPE_REMOTE) {
-      AddRemotePlayer(player->u.remote.ip_address, player->u.remote.port, queue);
+   if (player->type == GGPO_PLAYERTYPE_REMOTE) 
+   {
+      AddRemotePlayer( player->u.remote.ip_address, player->u.remote.port, queue);
+   }
+   else if (player->type == GGPO_PLAYERTYPE_REMOTE_EOS) 
+   {
+      AddRemotePlayerEOS(
+         player->u.remote_eos.product_user_id,
+         queue
+      );
    }
    return GGPO_OK;
 }
@@ -658,7 +664,7 @@ void Peer2PeerBackend::SetEosSendCallback(EosSendCallback callback)
       ) -> bool
       {
          return callback &&
-               callback(remote_id, packet, len);
+                callback(remote_id, packet, len);
       }
    );
 }

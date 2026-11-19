@@ -64,7 +64,7 @@ UdpProtocol::~UdpProtocol()
 }
 
 void
-UdpProtocol::Init(ITransport *transport, Poll &poll, int queue, char *ip, u_short port, UdpMsg::connect_status *status)
+UdpProtocol::Init(ITransport *transport, Poll &poll, int queue, const char *ip, u_short port, UdpMsg::connect_status *status)
 {
     _transport = NULL;
 
