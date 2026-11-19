@@ -27,6 +27,18 @@ public:
       _elements[_size++] = t;
    }
 
+   void remove(int index)
+   {
+      ASSERT(index >= 0 && index < _size);
+
+      for (int i = index; i < _size - 1; i++)
+      {
+         _elements[i] = _elements[i + 1];
+      }
+
+      _size--;
+   }
+
    int size() {
       return _size;
    }

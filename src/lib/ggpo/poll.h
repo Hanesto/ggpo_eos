@@ -29,6 +29,7 @@ public:
    void RegisterMsgLoop(IPollSink *sink, void *cookie = NULL);
    void RegisterPeriodic(IPollSink *sink, int interval, void *cookie = NULL);
    void RegisterLoop(IPollSink *sink, void *cookie = NULL);
+   void RemoveLoop(IPollSink *sink);
 
    void Run();
    bool Pump(int timeout);

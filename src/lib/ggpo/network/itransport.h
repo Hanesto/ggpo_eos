@@ -1,18 +1,44 @@
 #ifndef _I_TRANSPORT_H_
 #define _I_TRANSPORT_H_
 
+#include <stdint.h>
+#include <string.h>
+#include <winsock2.h>
+
+struct TransportAddress
+{
+    enum Type
+    {
+        UDP,
+        EOS
+    };
+
+    Type type;
+
+    union
+    {
+        sockaddr_in udp;
+        char eos_product_user_id[128];
+    };
+
+    TransportAddress()
+    {
+        memset(this, 0, sizeof(*this));
+    }
+};
+
 class ITransport
 {
 public:
-    virtual ~ITransport() {}
+    virtual ~ITransport() = default;
 
-    virtual void SendTo(
-        char* buffer,
+    virtual bool SendTo(
+        const char* buffer,
         int len,
-        int flags,
-        struct sockaddr* dst,
-        int destlen
+        const TransportAddress& destination
     ) = 0;
+
+    virtual void Close() = 0;
 };
 
 #endif

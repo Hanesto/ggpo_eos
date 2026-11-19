@@ -61,27 +61,33 @@ UdpProtocol::~UdpProtocol()
    ClearSendQueue();
 }
 
+
 void
-UdpProtocol::Init(ITransport *transport,
-                  Poll &poll,
-                  int queue,
-                  char *ip,
-                  u_short port,
-                  UdpMsg::connect_status *status)
-{  
-   _transport = transport;
-   _queue = queue;
-   _local_connect_status = status;
+UdpProtocol::Init(ITransport *transport, Poll &poll, int queue, char *ip, u_short port, UdpMsg::connect_status *status)
+{
+    _transport = transport;
+    _queue = queue;
+    _local_connect_status = status;
 
-   _peer_addr.sin_family = AF_INET;
-   _peer_addr.sin_port = htons(port);
-   inet_pton(AF_INET, ip, &_peer_addr.sin_addr.s_addr);
+    memset(&_peer_addr, 0, sizeof(_peer_addr));
 
-   do {
-      _magic_number = (uint16)rand();
-   } while (_magic_number == 0);
-   poll.RegisterLoop(this);
+    _peer_addr.type = TransportAddress::UDP;
+    _peer_addr.udp.sin_family = AF_INET;
+    _peer_addr.udp.sin_port = htons(port);
+
+    if (inet_pton(AF_INET, ip, &_peer_addr.udp.sin_addr) != 1) 
+    {
+        Log("Invalid peer IP address: %s\n", ip);
+        _transport = NULL;
+        return;
+    }
+
+    do { _magic_number = (uint16)rand(); } 
+    while (_magic_number == 0);
+
+    poll.RegisterLoop(this);
 }
+
 
 void
 UdpProtocol::SendInput(GameInput &input)
@@ -287,20 +293,21 @@ UdpProtocol::SendMsg(UdpMsg *msg)
    PumpSendQueue();
 }
 
+
 bool
-UdpProtocol::HandlesMsg(sockaddr_in &from,
-                        UdpMsg *msg)
+UdpProtocol::HandlesMsg(const TransportAddress &from, UdpMsg *msg)
 {
-   if (!_transport) {
-      return false;
-   }
-   return _peer_addr.sin_addr.S_un.S_addr == from.sin_addr.S_un.S_addr &&
-          _peer_addr.sin_port == from.sin_port;
+    if (!_transport || _peer_addr.type != TransportAddress::UDP) { return false; }
+
+    return _peer_addr.udp.sin_addr.s_addr == from.udp.sin_addr.s_addr &&
+           _peer_addr.udp.sin_port == from.udp.sin_port;
 }
 
 void
 UdpProtocol::OnMsg(UdpMsg *msg, int len)
 {
+   if (!msg || len < sizeof(msg->hdr)){return;}
+
    bool handled = false;
    typedef bool (UdpProtocol::*DispatchFn)(UdpMsg *msg, int len);
    static const DispatchFn table[] = {
@@ -731,20 +738,20 @@ UdpProtocol::PumpSendQueue()
          _oo_packet.send_time = Platform::GetCurrentTimeMS() + delay;
          _oo_packet.msg = entry.msg;
          _oo_packet.dest_addr = entry.dest_addr;
-      } else {
-         ASSERT(entry.dest_addr.sin_addr.s_addr);
+      } 
+      else {
+         ASSERT(entry.dest_addr.type == TransportAddress::UDP);
+         ASSERT(entry.dest_addr.udp.sin_addr.s_addr != 0);
 
-         _transport->SendTo((char *)entry.msg, entry.msg->PacketSize(), 0,
-                      (struct sockaddr *)&entry.dest_addr, sizeof entry.dest_addr);
-
+         _transport->SendTo((const char*)entry.msg, entry.msg->PacketSize(), entry.dest_addr);
          delete entry.msg;
       }
       _send_queue.pop();
    }
    if (_oo_packet.msg && _oo_packet.send_time < Platform::GetCurrentTimeMS()) {
       Log("sending rogue oop!");
-      _transport->SendTo((char *)_oo_packet.msg, _oo_packet.msg->PacketSize(), 0,
-                     (struct sockaddr *)&_oo_packet.dest_addr, sizeof _oo_packet.dest_addr);
+
+      _transport->SendTo((const char*)_oo_packet.msg, _oo_packet.msg->PacketSize(), _oo_packet.dest_addr);
 
       delete _oo_packet.msg;
       _oo_packet.msg = NULL;

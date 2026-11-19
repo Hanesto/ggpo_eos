@@ -582,22 +582,29 @@ Peer2PeerBackend::PlayerHandleToQueue(GGPOPlayerHandle player, int *queue)
 }
 
  
+
 void
-Peer2PeerBackend::OnMsg(sockaddr_in &from, UdpMsg *msg, int len)
+Peer2PeerBackend::OnMsg(const TransportAddress& from, UdpMsg *msg, int len)
 {
-   for (int i = 0; i < _num_players; i++) {
-      if (_endpoints[i].HandlesMsg(from, msg)) {
-         _endpoints[i].OnMsg(msg, len);
-         return;
+   if (from.type == TransportAddress::UDP) {
+      for (int i = 0; i < _num_players; i++) {
+         if (_endpoints[i].HandlesMsg(from, msg)) {
+            _endpoints[i].OnMsg(msg, len);
+            return;
+         }
+      }
+
+      for (int i = 0; i < _num_spectators; i++) {
+         if (_spectators[i].HandlesMsg(from, msg)) {
+            _spectators[i].OnMsg(msg, len);
+            return;
+         }
       }
    }
-   for (int i = 0; i < _num_spectators; i++) {
-      if (_spectators[i].HandlesMsg(from, msg)) {
-         _spectators[i].OnMsg(msg, len);
-         return;
-      }
-   }
+
+   // EOS packet routing will be added here.
 }
+
 
 void
 Peer2PeerBackend::CheckInitialSync()

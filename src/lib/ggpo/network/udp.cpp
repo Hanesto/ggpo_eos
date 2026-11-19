@@ -39,16 +39,14 @@ CreateSocket(uint16 bind_port, int retries)
 
 Udp::Udp() :
    _socket(INVALID_SOCKET),
-   _callbacks(NULL)
+   _callbacks(NULL),
+   _poll(NULL)
 {
 }
 
 Udp::~Udp(void)
 {
-   if (_socket != INVALID_SOCKET) {
-      closesocket(_socket);
-      _socket = INVALID_SOCKET;
-   }
+   Close();
 }
 
 void
@@ -61,22 +59,35 @@ Udp::Init(uint16 port, Poll *poll, Callbacks *callbacks)
 
    Log("binding udp socket to port %d.\n", port);
    _socket = CreateSocket(port, 0);
-}
 
-void
-Udp::SendTo(char *buffer, int len, int flags, struct sockaddr *dst, int destlen)
-{
-   struct sockaddr_in *to = (struct sockaddr_in *)dst;
-
-   int res = sendto(_socket, buffer, len, flags, dst, destlen);
-   if (res == SOCKET_ERROR) {
-      DWORD err = WSAGetLastError();
-      Log("unknown error in sendto (erro: %d  wsaerr: %d).\n", res, err);
-      ASSERT(FALSE && "Unknown error in sendto");
+   if (_socket == INVALID_SOCKET)
+   {
+      Log("Failed to create UDP socket.\n");
+      return;
    }
-   char dst_ip[1024];
-   Log("sent packet length %d to %s:%d (ret:%d).\n", len, inet_ntop(AF_INET, (void *)&to->sin_addr, dst_ip, ARRAY_SIZE(dst_ip)), ntohs(to->sin_port), res);
 }
+
+
+bool
+Udp::SendTo(const char* buffer, int len, const TransportAddress& destination)
+{
+    if (_socket == INVALID_SOCKET) { return false; }
+    if (buffer == NULL || len <= 0) { return false; }
+    if (destination.type != TransportAddress::UDP) { return false; }
+    if (destination.udp.sin_family != AF_INET || destination.udp.sin_addr.s_addr == 0 || destination.udp.sin_port == 0) { return false; }
+
+    int res = sendto(_socket, buffer, len, 0, (const sockaddr*)&destination.udp, sizeof(destination.udp));
+
+    if (res == SOCKET_ERROR) 
+    {
+        DWORD err = WSAGetLastError();
+        Log("sendto failed (error: %lu).\n", err);
+        return false;
+    }
+
+    return res == len;
+}
+
 
 bool
 Udp::OnLoopPoll(void *cookie)
@@ -91,22 +102,37 @@ Udp::OnLoopPoll(void *cookie)
 
       // TODO: handle len == 0... indicates a disconnect.
 
-      if (len == -1) {
+      if (len == -1) 
+      {
          int error = WSAGetLastError();
          if (error != WSAEWOULDBLOCK) {
             Log("recvfrom WSAGetLastError returned %d (%x).\n", error, error);
          }
          break;
-      } else if (len > 0) {
+      } else if (len > 0) 
+      {
          char src_ip[1024];
          Log("recvfrom returned (len:%d  from:%s:%d).\n", len, inet_ntop(AF_INET, (void*)&recv_addr.sin_addr, src_ip, ARRAY_SIZE(src_ip)), ntohs(recv_addr.sin_port) );
          UdpMsg *msg = (UdpMsg *)recv_buf;
-         _callbacks->OnMsg(recv_addr, msg, len);
+
+         TransportAddress from;
+         from.type = TransportAddress::UDP;
+         from.udp = recv_addr;
+
+         _callbacks->OnMsg(from, msg, len);
       } 
    }
    return true;
 }
 
+void
+Udp::Close()
+{
+   if (_socket != INVALID_SOCKET) {
+      closesocket(_socket);
+      _socket = INVALID_SOCKET;
+   }
+}
 
 void
 Udp::Log(const char *fmt, ...)

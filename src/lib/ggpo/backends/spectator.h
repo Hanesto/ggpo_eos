@@ -36,7 +36,7 @@ public:
    virtual GGPOErrorCode SetDisconnectNotifyStart(int timeout) { return GGPO_ERRORCODE_UNSUPPORTED; }
 
 public:
-   virtual void OnMsg(sockaddr_in &from, UdpMsg *msg, int len);
+   void OnMsg(const TransportAddress& from, UdpMsg *msg, int len) override;
 
 protected:
    void PollUdpProtocolEvents(void);

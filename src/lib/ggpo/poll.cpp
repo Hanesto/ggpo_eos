@@ -39,6 +39,23 @@ Poll::RegisterLoop(IPollSink *sink, void *cookie)
 {
    _loop_sinks.push_back(PollSinkCb(sink, cookie));
 }
+
+void
+Poll::RemoveLoop(IPollSink *sink)
+{
+   for (int i = 0; i < _loop_sinks.size();)
+   {
+      if (_loop_sinks[i].sink == sink)
+      {
+         _loop_sinks.remove(i);
+      }
+      else
+      {
+         i++;
+      }
+   }
+}
+
 void
 Poll::RegisterPeriodic(IPollSink *sink, int interval, void *cookie)
 {

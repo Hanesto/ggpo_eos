@@ -29,7 +29,7 @@ public:
 
    struct Callbacks {
       virtual ~Callbacks() { }
-      virtual void OnMsg(sockaddr_in &from, UdpMsg *msg, int len) = 0;
+      virtual void OnMsg(const TransportAddress& from, UdpMsg *msg, int len) = 0;
    };
 
 
@@ -41,7 +41,9 @@ public:
 
    void Init(uint16 port, Poll *p, Callbacks *callbacks);
    
-   void SendTo(char *buffer, int len, int flags, struct sockaddr *dst, int destlen) override;
+   bool SendTo(const char* buffer, int len, const TransportAddress& destination) override;
+
+   void Close() override;
 
    virtual bool OnLoopPoll(void *cookie);
 
