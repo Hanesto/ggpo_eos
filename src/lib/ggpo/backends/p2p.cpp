@@ -44,7 +44,7 @@ Peer2PeerBackend::Peer2PeerBackend(GGPOSessionCallbacks *cb,
     */
    _udp.Init(localport, &_poll, this);
    _eos_transport.Init(&_poll);
-   GGPO_SetEosTransport(&_eos_transport);
+   RegisterEosTransportCallbacks(&_eos_transport);
 
    _endpoints = new UdpProtocol[_num_players];
    memset(_local_connect_status, 0, sizeof(_local_connect_status));
@@ -60,8 +60,12 @@ Peer2PeerBackend::Peer2PeerBackend(GGPOSessionCallbacks *cb,
   
 Peer2PeerBackend::~Peer2PeerBackend()
 {
-   delete [] _endpoints;
-   GGPO_SetEosTransport(nullptr);
+    delete[] _endpoints;
+    _endpoints = nullptr;
+
+    _eos_transport.Close();
+
+    GGPO_UnregisterEosSendCallback();
 }
 
 void

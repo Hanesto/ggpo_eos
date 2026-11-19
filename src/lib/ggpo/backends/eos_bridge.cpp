@@ -6,31 +6,32 @@ typedef bool (*EosSendCallback)(
     int packet_size
 );
 
-static EosTransport* g_eos_transport = nullptr;
+static EosSendCallback g_eos_send_callback = nullptr;
 
-extern "C" __declspec(dllexport)
-void GGPO_SetEosTransport(EosTransport* transport)
+void RegisterEosTransportCallbacks(EosTransport* transport)
 {
-    g_eos_transport = transport;
+    if (!transport)
+        return;
+
+    transport->SetSendCallback(
+        [](const char* remote_id, const char* packet, int len) -> bool
+        {
+            if (!g_eos_send_callback)
+                return false;
+
+            return g_eos_send_callback(remote_id, packet, len);
+        }
+    );
 }
 
 extern "C" __declspec(dllexport)
 void GGPO_RegisterEosSendCallback(EosSendCallback callback)
 {
-    if (!g_eos_transport)
-        return;
+    g_eos_send_callback = callback;
+}
 
-    g_eos_transport->SetSendCallback(
-        [callback](
-            const char* remote_id,
-            const char* packet,
-            int len
-        ) -> bool
-        {
-            if (!callback)
-                return false;
-
-            return callback(remote_id, packet, len);
-        }
-    );
+extern "C" __declspec(dllexport)
+void GGPO_UnregisterEosSendCallback()
+{
+    g_eos_send_callback = nullptr;
 }
