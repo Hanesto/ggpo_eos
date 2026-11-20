@@ -19,9 +19,9 @@ void RegisterEosTransportCallbacks(EosTransport* transport);
 
 GGPO_EOS_EXPORT EosTransport* GGPO_CreateEosTransport();
 
-GGPO_EOS_EXPORT void GGPO_DestroyEosTransport( EosTransport* transport );
+GGPO_EOS_EXPORT void GGPO_DestroyEosTransport( EosTransport* transport);
 
-GGPO_EOS_EXPORT void GGPO_RegisterEosSendCallback( EosSendCallback callback );
+GGPO_EOS_EXPORT void GGPO_RegisterEosSendCallback( EosSendCallback callback);
 
 GGPO_EOS_EXPORT void GGPO_UnregisterEosSendCallback();
 

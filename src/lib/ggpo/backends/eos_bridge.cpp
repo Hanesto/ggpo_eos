@@ -4,6 +4,7 @@
 #include "backends/p2p.h"
 
 #include <stdint.h>
+#include <mutex>
 
 typedef bool (*EosSendCallback)(
     const char* remote_product_user_id,
@@ -12,6 +13,14 @@ typedef bool (*EosSendCallback)(
 );
 
 static EosSendCallback g_eos_send_callback = nullptr;
+static std::mutex g_eos_callback_mutex;
+
+// Safely retrieve the currently registered callback.
+static EosSendCallback GetEosSendCallback()
+{
+    std::lock_guard<std::mutex> lock(g_eos_callback_mutex);
+    return g_eos_send_callback;
+}
 
 void RegisterEosTransportCallbacks(EosTransport* transport)
 {
@@ -20,8 +29,13 @@ void RegisterEosTransportCallbacks(EosTransport* transport)
     transport->SetSendCallback(
         [](const char* remote_id, const char* packet, int len) -> bool
         {
-            if (!g_eos_send_callback){ return false; }
-            return g_eos_send_callback(remote_id, packet, len);
+            if (!remote_id || !packet || len <= 0){ return false; }
+
+            EosSendCallback callback = GetEosSendCallback();
+
+            if (!callback){ return false; }
+
+            return callback(remote_id, packet, len);
         }
     );
 }
@@ -46,12 +60,14 @@ void GGPO_DestroyEosTransport(EosTransport* transport)
 extern "C" __declspec(dllexport)
 void GGPO_RegisterEosSendCallback(EosSendCallback callback)
 {
+    std::lock_guard<std::mutex> lock(g_eos_callback_mutex);
     g_eos_send_callback = callback;
 }
 
 extern "C" __declspec(dllexport)
 void GGPO_UnregisterEosSendCallback()
 {
+    std::lock_guard<std::mutex> lock(g_eos_callback_mutex);
     g_eos_send_callback = nullptr;
 }
 

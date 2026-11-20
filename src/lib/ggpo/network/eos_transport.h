@@ -7,11 +7,12 @@
 #include <stdint.h>
 #include <string>
 #include <functional>
-#include <unordered_map>
 #include <queue>
 #include <vector>
 #include <mutex>
+#include <condition_variable>
 
+// EOS callback shared with the GGPO backend and bridge.
 typedef bool (*EosSendCallback)(
     const char* remote_product_user_id,
     const char* packet,
@@ -34,16 +35,15 @@ public:
         int len
     )> ReceiveCallback;
 
-    void SetReceiveCallback(ReceiveCallback callback);
-
     EosTransport();
     virtual ~EosTransport();
 
-    // Initialize the EOS transport.
+    // Initialize and register with GGPO's poll system.
     void Init(Poll* poll);
 
-    // Register callback used to send packets through Unity/EOS.
+    // Register callbacks.
     void SetSendCallback(SendCallback callback);
+    void SetReceiveCallback(ReceiveCallback callback);
 
     // Set local EOS identity.
     void SetLocalProductUserId(const char* product_user_id);
@@ -75,15 +75,26 @@ private:
         std::vector<uint8_t> data;
     };
 
+    static const size_t MAX_PACKET_SIZE = 64 * 1024;
+    static const size_t MAX_QUEUE_PACKETS = 1024;
+    static const size_t MAX_QUEUE_BYTES = 4 * 1024 * 1024;
+
+    void FinishCallback();
+
     SendCallback _send_callback;
+    ReceiveCallback _receive_callback;
 
     std::string _local_product_user_id;
 
     std::queue<ReceivedPacket> _receive_queue;
 
-    std::mutex _receive_mutex;
+    size_t _queued_bytes;
+    size_t _active_callbacks;
 
-    ReceiveCallback _receive_callback;
+    Poll* _poll;
+
+    std::mutex _mutex;
+    std::condition_variable _callbacks_finished;
 
     bool _initialized;
 };

@@ -40,7 +40,7 @@ Peer2PeerBackend::Peer2PeerBackend(GGPOSessionCallbacks *cb,
    _sync.Init(config);
 
    /*
-    * Initialize the UDP port
+    * Initialize the UDP and EOS ports
     */
    _udp.Init(localport, &_poll, this);
    _eos_transport.Init(&_poll);
@@ -66,12 +66,15 @@ Peer2PeerBackend::Peer2PeerBackend(GGPOSessionCallbacks *cb,
   
 Peer2PeerBackend::~Peer2PeerBackend()
 {
-    delete[] _endpoints;
-    _endpoints = nullptr;
-
+    // Stop receiving and unregister from the Poll system first.
     _eos_transport.Close();
 
+    // Unregister the global EOS send callback.
     GGPO_UnregisterEosSendCallback();
+
+    // Destroy the GGPO endpoints after transport shutdown.
+    delete[] _endpoints;
+    _endpoints = nullptr;
 }
 
 void
@@ -81,11 +84,32 @@ Peer2PeerBackend::AddRemotePlayer(char* remoteip, uint16 reportport, int queue)
    ConfigureRemotePlayer(queue);
 }
 
-void
+bool
 Peer2PeerBackend::AddRemotePlayerEOS(const char* remote_product_user_id, int queue)
 {
+   if (!remote_product_user_id || !remote_product_user_id[0])
+   {
+      Log("Cannot add EOS player: invalid Product User ID.\n");
+      return false;
+   }
+
+   if (queue < 0 || queue >= _num_players)
+   {
+      Log("Cannot add EOS player: invalid player queue.\n");
+      return false;
+   }
+
    _endpoints[queue].InitEOS(&_eos_transport, _poll, queue, remote_product_user_id, _local_connect_status);
+
+   // InitEOS() returns void, so verify initialization explicitly.
+   if (!_endpoints[queue].IsInitialized())
+   {
+      Log("Failed to initialize EOS endpoint for queue %d.\n", queue);
+      return false;
+   }
+
    ConfigureRemotePlayer(queue);
+   return true;
 }
 
 void
@@ -287,12 +311,12 @@ Peer2PeerBackend::AddPlayer(GGPOPlayer *player, GGPOPlayerHandle *handle)
    {
       AddRemotePlayer( player->u.remote.ip_address, player->u.remote.port, queue);
    }
-   else if (player->type == GGPO_PLAYERTYPE_REMOTE_EOS) 
+   else if (player->type == GGPO_PLAYERTYPE_REMOTE_EOS)
    {
-      AddRemotePlayerEOS(
-         player->u.remote_eos.product_user_id,
-         queue
-      );
+      if (!AddRemotePlayerEOS(player->u.remote_eos.product_user_id, queue))
+      {
+         return GGPO_ERRORCODE_INVALID_REQUEST;
+      }
    }
    return GGPO_OK;
 }
@@ -680,11 +704,4 @@ void Peer2PeerBackend::SetEosSendCallback(EosSendCallback callback)
                 callback(remote_id, packet, len);
       }
    );
-}
-
-void
-Peer2PeerBackend::PollEosProtocolEvents(void)
-{
-    // EOS packets are delivered through EosTransport's Poll callback.
-    // We will dispatch them into the matching UdpProtocol endpoint.
 }
