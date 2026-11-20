@@ -5,6 +5,8 @@
  * in the LICENSE file.
  */
 
+#include <string.h>
+
 #ifndef _UDP_MSG_H
 #define _UDP_MSG_H
 
@@ -76,30 +78,38 @@ struct UdpMsg
    } u;
 
 public:
-   int PacketSize() {
-      return sizeof(hdr) + PayloadSize();
+   int PacketSize()
+   {
+      if (hdr.type > InputAck || hdr.type == Invalid){ return 0; }
+      return (int)(sizeof(hdr) + PayloadSize());
    }
 
-   int PayloadSize() {
-      int size;
+   int PayloadSize()
+   {
+      switch (hdr.type)
+      {
+         case SyncRequest: return sizeof(u.sync_request);
+         case SyncReply: return sizeof(u.sync_reply);
+         case QualityReport: return sizeof(u.quality_report);
+         case QualityReply: return sizeof(u.quality_reply);
+         case InputAck: return sizeof(u.input_ack);
+         case KeepAlive: return 0;
+         case Input:
+         {
+            if (u.input.num_bits > MAX_COMPRESSED_BITS * 8){ return 0; }
+            int header_size = (int)((char*)&u.input.bits - (char*)&u.input);
 
-      switch (hdr.type) {
-      case SyncRequest:   return sizeof(u.sync_request);
-      case SyncReply:     return sizeof(u.sync_reply);
-      case QualityReport: return sizeof(u.quality_report);
-      case QualityReply:  return sizeof(u.quality_reply);
-      case InputAck:      return sizeof(u.input_ack);
-      case KeepAlive:     return 0;
-      case Input:
-         size = (int)((char *)&u.input.bits - (char *)&u.input);
-         size += (u.input.num_bits + 7) / 8;
-         return size;
-      }
-      ASSERT(false);
-      return 0;
+            return header_size + (u.input.num_bits + 7) / 8;
+         }
+         default: return 0;
+         }
    }
 
-   UdpMsg(MsgType t) { hdr.type = (uint8)t; }
+   UdpMsg(MsgType t)
+   {
+      memset(this, 0, sizeof(*this));
+      hdr.type = (uint8)t;
+   }
 };
 
 #pragma pack(pop)

@@ -44,6 +44,12 @@ Peer2PeerBackend::Peer2PeerBackend(GGPOSessionCallbacks *cb,
     */
    _udp.Init(localport, &_poll, this);
    _eos_transport.Init(&_poll);
+   _eos_transport.SetReceiveCallback([this](const TransportAddress& from, const char* buffer, int len)
+   {
+      if (!buffer || len <= 0){ return; }
+      UdpMsg* msg = (UdpMsg*)buffer;
+      OnMsg(from, msg, len);
+   });
    RegisterEosTransportCallbacks(&_eos_transport);
 
    _endpoints = new UdpProtocol[_num_players];
@@ -256,6 +262,13 @@ int Peer2PeerBackend::PollNPlayers(int current_frame)
    return total_min_confirmed;
 }
 
+void
+Peer2PeerBackend::ReceiveEosPacket(const char* remote_product_user_id, const uint8_t* packet, int packet_size)
+{
+   if (!remote_product_user_id || !packet || packet_size <= 0){ return; }
+
+   _eos_transport.ReceivePacket(remote_product_user_id, packet, packet_size);
+}
 
 GGPOErrorCode
 Peer2PeerBackend::AddPlayer(GGPOPlayer *player, GGPOPlayerHandle *handle)
@@ -667,4 +680,11 @@ void Peer2PeerBackend::SetEosSendCallback(EosSendCallback callback)
                 callback(remote_id, packet, len);
       }
    );
+}
+
+void
+Peer2PeerBackend::PollEosProtocolEvents(void)
+{
+    // EOS packets are delivered through EosTransport's Poll callback.
+    // We will dispatch them into the matching UdpProtocol endpoint.
 }

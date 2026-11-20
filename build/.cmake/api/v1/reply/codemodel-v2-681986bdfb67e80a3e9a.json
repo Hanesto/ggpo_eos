@@ -90,7 +90,7 @@
 				{
 					"directoryIndex" : 1,
 					"id" : "GGPO::@145eef247bfb46b6828c",
-					"jsonFile" : "target-GGPO-Debug-cc9ee4f79f2e76e5cead.json",
+					"jsonFile" : "target-GGPO-Debug-6a023806b6848bed4ae1.json",
 					"name" : "GGPO",
 					"projectIndex" : 0
 				},
@@ -199,7 +199,7 @@
 				{
 					"directoryIndex" : 1,
 					"id" : "GGPO::@145eef247bfb46b6828c",
-					"jsonFile" : "target-GGPO-Release-85ba42abc95098139f64.json",
+					"jsonFile" : "target-GGPO-Release-db09e29501d4e37e4cca.json",
 					"name" : "GGPO",
 					"projectIndex" : 0
 				},

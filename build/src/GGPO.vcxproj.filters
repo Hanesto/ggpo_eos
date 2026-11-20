@@ -46,7 +46,7 @@
     <ClCompile Include="D:\Projects\ggpo_eos\src\lib\ggpo\network\eos_transport.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\ggpo_eos\src\lib\ggpo\network\eos_bridge.cpp">
+    <ClCompile Include="D:\Projects\ggpo_eos\src\lib\ggpo\backends\eos_bridge.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -111,7 +111,7 @@
     <ClInclude Include="D:\Projects\ggpo_eos\src\lib\ggpo\network\eos_transport.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="D:\Projects\ggpo_eos\src\lib\ggpo\network\eos_bridge.h">
+    <ClInclude Include="D:\Projects\ggpo_eos\src\lib\ggpo\backends\eos_bridge.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -16,6 +16,8 @@
 #include "network/udp_proto.h"
 #include "network/eos_transport.h"
 
+#include <memory>
+
 class Peer2PeerBackend : public IQuarkBackend, IPollSink, Udp::Callbacks {
 public:
    Peer2PeerBackend(GGPOSessionCallbacks *cb, const char *gamename, uint16 localport, int num_players, int input_size);
@@ -37,6 +39,8 @@ public:
 public:
    void OnMsg(const TransportAddress& from, UdpMsg *msg, int len) override;
    void SetEosSendCallback(EosSendCallback callback);
+   void PollEosProtocolEvents(void);
+   void ReceiveEosPacket(const char* remote_product_user_id, const uint8_t* packet, int packet_size);
 
 protected:
    GGPOErrorCode PlayerHandleToQueue(GGPOPlayerHandle player, int *queue);

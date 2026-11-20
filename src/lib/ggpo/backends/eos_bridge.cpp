@@ -1,4 +1,9 @@
 #include "../network/eos_transport.h"
+#include "backend.h"
+#include "ggponet.h"
+#include "backends/p2p.h"
+
+#include <stdint.h>
 
 typedef bool (*EosSendCallback)(
     const char* remote_product_user_id,
@@ -10,18 +15,38 @@ static EosSendCallback g_eos_send_callback = nullptr;
 
 void RegisterEosTransportCallbacks(EosTransport* transport)
 {
-    if (!transport)
-        return;
+    if (!transport){ return; }
 
     transport->SetSendCallback(
         [](const char* remote_id, const char* packet, int len) -> bool
         {
-            if (!g_eos_send_callback)
-                return false;
-
+            if (!g_eos_send_callback){ return false; }
             return g_eos_send_callback(remote_id, packet, len);
         }
     );
+}
+
+extern "C" __declspec(dllexport)
+void GGPO_RegisterEosSendCallback(EosSendCallback callback)
+{
+    g_eos_send_callback = callback;
+}
+
+extern "C" __declspec(dllexport)
+EosTransport* GGPO_CreateEosTransport()
+{
+    EosTransport* transport = new EosTransport();
+    RegisterEosTransportCallbacks(transport);
+    return transport;
+}
+
+extern "C" __declspec(dllexport)
+void GGPO_DestroyEosTransport(EosTransport* transport)
+{
+    if (!transport){ return; }
+
+    transport->Close();
+    delete transport;
 }
 
 extern "C" __declspec(dllexport)
@@ -37,10 +62,13 @@ void GGPO_UnregisterEosSendCallback()
 }
 
 extern "C" __declspec(dllexport)
-void GGPO_ReceiveEosPacket(EosTransport* transport, const char* remote_product_user_id, const uint8_t* packet, int packet_size)
+void GGPO_ReceiveEosPacket(GGPOSession* session, const char* remote_product_user_id, const uint8_t* packet, int packet_size)
 {
-    if (!transport || !remote_product_user_id || !packet){ return; }
-    if (packet_size <= 0){ return; }
+    if (!session || !remote_product_user_id || !packet || packet_size <= 0){ return; }
 
-    transport->ReceivePacket(remote_product_user_id, packet, packet_size);
+    Peer2PeerBackend* backend = dynamic_cast<Peer2PeerBackend*>(session);
+
+    if (!backend){ return; }
+
+    backend->ReceiveEosPacket(remote_product_user_id, packet, packet_size);
 }

@@ -11,6 +11,8 @@
 #include "ggponet.h"
 #include "types.h"
 
+#include <stdint.h>
+
 struct GGPOSession {
    virtual ~GGPOSession() { }
    virtual GGPOErrorCode DoPoll(int timeout) { return GGPO_OK; }
@@ -19,6 +21,7 @@ struct GGPOSession {
    virtual GGPOErrorCode SyncInput(void *values, int size, int *disconnect_flags) = 0;
    virtual GGPOErrorCode IncrementFrame(void) { return GGPO_OK; }
    virtual GGPOErrorCode Chat(char *text) { return GGPO_OK; }
+   virtual void ReceiveEosPacket(const char* remote_product_user_id, const uint8_t* packet, int packet_size) {}
    virtual GGPOErrorCode DisconnectPlayer(GGPOPlayerHandle handle) { return GGPO_OK; }
    virtual GGPOErrorCode GetNetworkStats(GGPONetworkStats *stats, GGPOPlayerHandle handle) { return GGPO_OK; }
    virtual GGPOErrorCode Logv(const char *fmt, va_list list) { ::Logv(fmt, list); return GGPO_OK; }
