@@ -11,6 +11,7 @@ Traditional techniques account for network transmission time by adding delay to 
 For more information about the history of GGPO, check out http://ggpo.net/
 
 This repository contains the code, documentation, and sample applications for the SDK.
+This version has been adapted to use EOS transports instead of the usual UDP method. The sample project has not been tested. 
 
 ## Building
 
