@@ -27,12 +27,6 @@ void RegisterEosTransportCallbacks(EosTransport* transport)
 }
 
 extern "C" __declspec(dllexport)
-void GGPO_RegisterEosSendCallback(EosSendCallback callback)
-{
-    g_eos_send_callback = callback;
-}
-
-extern "C" __declspec(dllexport)
 EosTransport* GGPO_CreateEosTransport()
 {
     EosTransport* transport = new EosTransport();
