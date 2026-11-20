@@ -132,6 +132,11 @@ protected:
 
 protected:
    /*
+   * Poll registration
+   */
+   Poll* _poll;
+
+   /*
     * Network transmission information
     */
    ITransport    *_transport;

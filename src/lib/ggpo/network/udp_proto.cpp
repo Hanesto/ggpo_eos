@@ -38,6 +38,7 @@ UdpProtocol::UdpProtocol() :
    _connected(false),
    _next_send_seq(0),
    _next_recv_seq(0),
+   _poll(NULL),
    _transport(NULL),
    _current_state(Disconnected),
    _local_connect_status(NULL)
@@ -60,6 +61,13 @@ UdpProtocol::UdpProtocol() :
 
 UdpProtocol::~UdpProtocol()
 {
+   // Unregister from Poll before destroying this object.
+   if (_poll)
+   {
+      _poll->RemoveLoop(this);
+      _poll = NULL;
+   }
+
    ClearSendQueue();
 }
 
@@ -116,16 +124,17 @@ UdpProtocol::InitEOS(ITransport* transport, Poll& poll, int queue, const char* p
 void
 UdpProtocol::Initialize(ITransport *transport, Poll &poll, int queue, UdpMsg::connect_status *status)
 {
-    _transport = transport;
-    _queue = queue;
-    _local_connect_status = status;
+   _transport = transport;
+   _queue = queue;
+   _local_connect_status = status;
 
-    do {
-        _magic_number = (uint16)rand();
-    }
-    while (_magic_number == 0);
+   do {
+      _magic_number = (uint16)rand();
+   }
+   while (_magic_number == 0);
 
-    poll.RegisterLoop(this);
+   _poll = &poll;
+   _poll->RegisterLoop(this);
 }
 
 void
@@ -293,10 +302,7 @@ UdpProtocol::OnLoopPoll(void *cookie)
          _transport = NULL;
          _shutdown_timeout = 0;
       }
-
    }
-
-
    return true;
 }
 

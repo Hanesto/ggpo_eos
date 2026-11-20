@@ -44,12 +44,20 @@ Peer2PeerBackend::Peer2PeerBackend(GGPOSessionCallbacks *cb,
     */
    _udp.Init(localport, &_poll, this);
    _eos_transport.Init(&_poll);
-   _eos_transport.SetReceiveCallback([this](const TransportAddress& from, const char* buffer, int len)
-   {
-      if (!buffer || len <= 0){ return; }
-      UdpMsg* msg = (UdpMsg*)buffer;
-      OnMsg(from, msg, len);
-   });
+   _eos_transport.SetReceiveCallback(
+      [this](const TransportAddress& from, const char* buffer, int len)
+      {
+         if (!buffer || len < (int)sizeof(UdpMsg))
+         {
+               Log("EOS: Ignoring invalid or truncated packet. Size: %d\n", len);
+               return;
+         }
+
+         UdpMsg* msg = reinterpret_cast<UdpMsg*>( const_cast<char*>(buffer) );
+
+         OnMsg(from, msg, len);
+      }
+   );
    RegisterEosTransportCallbacks(&_eos_transport);
 
    _endpoints = new UdpProtocol[_num_players];

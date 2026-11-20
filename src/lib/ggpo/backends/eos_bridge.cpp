@@ -5,21 +5,60 @@
 
 #include <stdint.h>
 #include <mutex>
+#include <condition_variable>
 
-typedef bool (*EosSendCallback)(
+using EosSendCallback = bool (__cdecl *)(
     const char* remote_product_user_id,
     const char* packet,
     int packet_size
 );
 
 static EosSendCallback g_eos_send_callback = nullptr;
-static std::mutex g_eos_callback_mutex;
 
-// Safely retrieve the currently registered callback.
-static EosSendCallback GetEosSendCallback()
+static std::mutex g_eos_callback_mutex;
+static std::condition_variable g_eos_callback_cv;
+
+static int g_active_eos_callbacks = 0;
+static bool g_eos_callback_shutting_down = false;
+
+static bool InvokeEosSendCallback(const char* remote_id, const char* packet, int len)
 {
-    std::lock_guard<std::mutex> lock(g_eos_callback_mutex);
-    return g_eos_send_callback;
+    if (!remote_id || !packet || len <= 0){ return false; }
+
+    EosSendCallback callback = nullptr;
+
+    {
+        std::lock_guard<std::mutex> lock(g_eos_callback_mutex);
+
+        if (g_eos_callback_shutting_down || g_eos_send_callback == nullptr)
+        {
+            return false;
+        }
+
+        callback = g_eos_send_callback;
+        ++g_active_eos_callbacks;
+    }
+
+    bool result = false;
+
+    try
+    {
+        result = callback(remote_id, packet, len);
+    }
+    catch (...)
+    {
+        result = false;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(g_eos_callback_mutex);
+
+        --g_active_eos_callbacks;
+
+        if (g_active_eos_callbacks == 0){ g_eos_callback_cv.notify_all(); }
+    }
+
+    return result;
 }
 
 void RegisterEosTransportCallbacks(EosTransport* transport)
@@ -29,13 +68,7 @@ void RegisterEosTransportCallbacks(EosTransport* transport)
     transport->SetSendCallback(
         [](const char* remote_id, const char* packet, int len) -> bool
         {
-            if (!remote_id || !packet || len <= 0){ return false; }
-
-            EosSendCallback callback = GetEosSendCallback();
-
-            if (!callback){ return false; }
-
-            return callback(remote_id, packet, len);
+            return InvokeEosSendCallback(remote_id, packet, len);
         }
     );
 }
@@ -61,14 +94,27 @@ extern "C" __declspec(dllexport)
 void GGPO_RegisterEosSendCallback(EosSendCallback callback)
 {
     std::lock_guard<std::mutex> lock(g_eos_callback_mutex);
+
+    g_eos_callback_shutting_down = false;
     g_eos_send_callback = callback;
 }
 
 extern "C" __declspec(dllexport)
 void GGPO_UnregisterEosSendCallback()
 {
-    std::lock_guard<std::mutex> lock(g_eos_callback_mutex);
+    std::unique_lock<std::mutex> lock(g_eos_callback_mutex);
+
+    g_eos_callback_shutting_down = true;
+
     g_eos_send_callback = nullptr;
+
+    g_eos_callback_cv.wait(
+        lock,
+        []()
+        {
+            return g_active_eos_callbacks == 0;
+        }
+    );
 }
 
 extern "C" __declspec(dllexport)
